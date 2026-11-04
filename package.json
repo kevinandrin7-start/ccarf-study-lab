@@ -2,12 +2,8 @@
   "name": "ccarf-study-lab",
   "version": "1.0.0",
   "private": true,
-  "description": "Study guide and mock exam app for the Claude Certified Architect – Foundations (CCAR-F) exam",
-  "scripts": {
-    "build:css": "tailwindcss -i tw.css -o dist/tw.css --minify",
-    "build:js": "esbuild src/main.jsx --bundle --format=iife --minify --target=es2019 --alias:react=./shims/react.js --alias:react-dom/client=./shims/react-dom.js --outfile=dist/app.js",
-    "build": "npm run build:css && npm run build:js"
-  },
+  "description": "iOS-style study guide and mock exam app for the Claude Certified Architect – Foundations (CCAR-F) exam",
+  "scripts": { "build": "bash build.sh" },
   "dependencies": { "lucide-react": "0.454.0" },
   "devDependencies": { "esbuild": "0.24.0", "tailwindcss": "3.4.17" }
 }

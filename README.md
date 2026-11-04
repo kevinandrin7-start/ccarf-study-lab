@@ -1,25 +1,28 @@
 # CCAR-F Study Lab
 
-A study guide and mock exam app for the **Claude Certified Architect – Foundations (CCAR-F)** exam.
+An iOS-style study app for the **Claude Certified Architect – Foundations (CCAR-F)** exam.
 
-- **Study guide**: one lesson for each of the six domains, with objectives, notes, reference tables and common traps
-- **Practice**: quiz mode with instant feedback, plus a flashcard mode
-- **Mock exam**: 30, 45 or 60 minutes, a 75% pass mark, randomised questions, flag-for-review and a breakdown by domain
-- **Progress**: accuracy, weak areas and exam history, saved in your browser
+**Live app:** https://kevinandrin7-start.github.io/ccarf-study-lab/
 
-The questions are original practice items written against the study domains. They are not official exam content. Model and API facts reflect the Claude API as of November 2026.
+- **Learn:** 30 short lessons across the five domains of Anthropic's published exam guide, written in plain language. Each has a simple explanation, an everyday analogy, key points, a real example, a one-line "remember" and a quick check.
+- **Practice:** exam-style scenario questions, with an explanation for every option and a link back to the lesson.
+- **Exam:** timed mock exams (15 questions in 30 minutes, or all questions in 60 minutes) with a 72% pass mark, matching the real 720/1000.
+- **Progress:** lessons done, accuracy by topic, exam history, and a light/dark setting.
 
-## Run it
+| Domain | Weight |
+|---|---|
+| Agentic Architecture & Orchestration | 27% |
+| Claude Code Configuration & Workflows | 20% |
+| Prompt Engineering & Structured Output | 20% |
+| Tool Design & MCP Integration | 18% |
+| Context Management & Reliability | 15% |
 
-`index.html` is self-contained. Open it in a browser or serve it from GitHub Pages. React and the fonts load from public CDNs.
+The questions are original practice items, not official exam questions.
 
-## Edit it
+## Editing
 
-The source is in `src/`. `questions.js` holds the question bank, `studyGuide.js` the lessons, and `App.jsx` the UI. To rebuild after editing:
+- `src/lessons.js`: domains, lessons and exam facts
+- `src/questions.js`: practice questions
+- `src/App.jsx`: the interface
 
-```bash
-npm install
-npm run build
-```
-
-Then paste `dist/tw.css` into the second `<style>` block of `index.html` and `dist/app.js` into the final `<script>` block.
+Rebuild with `npm install` and then `npm run build`. This writes `out/index.html`; copy it over `index.html`.
