@@ -7,6 +7,6 @@ h=open('head.html').read().replace('<style>/*TW*/</style>','<style>'+open('out/t
 js=open('out/app.js').read()
 open('out/artifact.html','w').write(h+'<div id="root"><div class="boot">Loading…</div></div>\n<script>'+js+'</script>\n')
 head,_,rest=h.partition('<script src')
-full='<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n<meta name="apple-mobile-web-app-capable" content="yes">\n'+h+'\n</head>\n<body>\n<div id="root"><div class="boot">Loading…</div></div>\n<script>'+js+'</script>\n</body>\n</html>\n'
+full='<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-title" content="CCAR-F">\n<meta name="apple-mobile-web-app-status-bar-style" content="default">\n<link rel="apple-touch-icon" href="apple-touch-icon.png">\n<link rel="icon" type="image/png" href="favicon.png">\n<link rel="manifest" href="manifest.webmanifest">\n'+h+'\n</head>\n<body>\n<div id="root"><div class="boot">Loading…</div></div>\n<script>'+js+'</script>\n</body>\n</html>\n'
 open('out/index.html','w').write(full)
 PY
