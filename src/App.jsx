@@ -2,10 +2,11 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import {
   BookOpen, Layers, Timer, BarChart3, ChevronLeft, ChevronRight, Check, X, Flag, Lightbulb,
   Target, Network, Terminal, MessageSquareText, Wrench, ShieldCheck, RotateCcw, Trophy,
-  AlertTriangle, Info, Play, Clock, CircleCheck, LayoutGrid, Sparkles, Bookmark,
+  AlertTriangle, Info, Play, Clock, CircleCheck, LayoutGrid, Sparkles, Bookmark, ScrollText, Ban,
 } from "lucide-react";
 import { DOMAINS, LESSONS, EXAM_FACTS, SCENARIOS } from "./lessons.js";
 import { QUESTIONS } from "./questions.js";
+import { CHEAT_SHEET } from "./cheatSheet.js";
 
 /* ============================ Storage ============================ */
 const KEY = "ccarf-v2";
@@ -708,9 +709,68 @@ function ProgressTab({ p, setP, openDomain, practise }) {
   );
 }
 
+/* ============================ CHEAT SHEET ============================ */
+function CheatSheetTab({ openLesson }) {
+  const [showMeaning, setShowMeaning] = useState(true);
+  return (
+    <div className="flex flex-col gap-6">
+      <LargeTitle title="Cheat Sheet" subtitle="The key rules to memorise before the exam." />
+      <div className="flex items-center justify-between gap-3 rounded-[12px] bg-card px-4 py-3">
+        <span className="text-[17px] text-label">Show explanations</span>
+        <button role="switch" aria-checked={showMeaning} onClick={() => setShowMeaning((v) => !v)}
+          className={cx("relative h-[31px] w-[51px] shrink-0 rounded-full transition-colors", showMeaning ? "bg-green" : "bg-fill")}>
+          <span className={cx("absolute top-[2px] h-[27px] w-[27px] rounded-full bg-white shadow transition-all", showMeaning ? "left-[22px]" : "left-[2px]")} />
+        </button>
+      </div>
+      {CHEAT_SHEET.map((sec, si) => (
+        <section key={sec.id} className="flex flex-col">
+          <div className="px-4 pb-2">
+            <h2 className={cx("text-[20px] font-bold leading-tight", sec.style === "warnings" ? "text-red" : "text-label")}>{sec.title}</h2>
+            {sec.subtitle && <p className="mt-0.5 text-[13px] text-label2">{sec.subtitle}</p>}
+          </div>
+          {sec.style === "warnings" ? (
+            <div className="grid gap-2.5 sm:grid-cols-3">
+              {sec.items.map((it, i) => {
+                const [cause, effect] = it.text.split("→").map((x) => x.trim());
+                return (
+                  <div key={i} className="flex flex-col gap-1.5 rounded-[14px] border-[1.5px] border-red/40 bg-red/10 p-3.5">
+                    <span className="flex items-center gap-1.5 text-[17px] font-semibold text-label"><Ban size={17} className="shrink-0 text-red" /><Rich text={cause} /></span>
+                    {effect && <span className="text-[15px] font-semibold text-red">→ {effect}</span>}
+                    {showMeaning && it.means && <span className="text-[14px] leading-snug text-label2"><Rich text={it.means} /></span>}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-[12px] bg-card">
+              {sec.items.map((it, i) => (
+                <div key={i} className="flex gap-3 pl-4">
+                  {sec.style === "rules"
+                    ? <span className="mt-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue text-[14px] font-bold text-white">{i + 1}</span>
+                    : <span className="mt-[22px] h-1.5 w-1.5 shrink-0 rounded-full bg-blue" />}
+                  <div className={cx("min-w-0 flex-1 py-3 pr-4", i < sec.items.length - 1 && "border-b-[0.5px] border-sep")}>
+                    <p className="text-[17px] font-semibold leading-snug text-label"><Rich text={it.text} /></p>
+                    {showMeaning && it.means && <p className="mt-1 text-[14px] leading-snug text-label2"><Rich text={it.means} /></p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {sec.lesson && lessonById[sec.lesson] && (CHEAT_SHEET[si + 1] || {}).lesson !== sec.lesson && (
+            <button onClick={() => openLesson(sec.lesson)} className="self-start px-4 pt-2 text-[15px] font-semibold text-blue active:opacity-50">
+              Review lesson {sec.lesson}: {lessonById[sec.lesson].title}
+            </button>
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
+
 /* ============================ App shell ============================ */
 const TABS = [
   { id: "learn", label: "Learn", icon: BookOpen },
+  { id: "cheatsheet", label: "Cheat Sheet", icon: ScrollText },
   { id: "practice", label: "Practice", icon: Layers },
   { id: "exam", label: "Exam", icon: Timer },
   { id: "progress", label: "Progress", icon: BarChart3 },
@@ -766,6 +826,8 @@ export default function App() {
     else screen = <LessonView key={top.id} p={p} setP={setP} id={top.id} open={pushLearn} back={popLearn} />;
   } else if (tab === "practice") {
     screen = practice ? <PracticeRun key={practiceKey} set={practice} record={record} back={() => { setPractice(null); window.scrollTo({ top: 0 }); }} openLesson={openLesson} /> : <PracticeHome p={p} start={startPractice} />;
+  } else if (tab === "cheatsheet") {
+    screen = <CheatSheetTab openLesson={openLesson} />;
   } else if (tab === "exam") {
     screen = <ExamTab setP={setP} record={record} openLesson={openLesson} />;
   } else {
@@ -776,11 +838,11 @@ export default function App() {
     <div className="min-h-full bg-bg text-label">
       <main className="gutter mx-auto max-w-[640px] pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-2">{screen}</main>
       <nav className="tabbar fixed inset-x-0 bottom-0 z-40 border-t-[0.5px] border-sep" aria-label="Sections">
-        <div className="gutter mx-auto grid max-w-[640px] grid-cols-4 pb-[env(safe-area-inset-bottom,0px)]">
+        <div className="gutter mx-auto grid max-w-[640px] grid-cols-5 pb-[env(safe-area-inset-bottom,0px)]">
           {TABS.map((t) => (
             <button key={t.id} onClick={() => tapTab(t.id)} aria-current={tab === t.id ? "page" : undefined}
               className={cx("flex flex-col items-center gap-0.5 pb-1.5 pt-2 text-[10px] font-medium", tab === t.id ? "text-blue" : "text-label3")}>
-              <t.icon size={25} strokeWidth={tab === t.id ? 2.3 : 1.8} />{t.label}
+              <t.icon size={25} strokeWidth={tab === t.id ? 2.3 : 1.8} /><span className="whitespace-nowrap">{t.label}</span>
             </button>
           ))}
         </div>
