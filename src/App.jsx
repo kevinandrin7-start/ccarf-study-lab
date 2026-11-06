@@ -7,6 +7,7 @@ import {
 import { DOMAINS, LESSONS, EXAM_FACTS, SCENARIOS } from "./lessons.js";
 import { QUESTIONS } from "./questions.js";
 import { CHEAT_SHEET } from "./cheatSheet.js";
+import { MOCKS, MOCK_QUESTIONS } from "./mocks.js";
 
 /* ============================ Storage ============================ */
 const KEY = "ccarf-v2";
@@ -23,13 +24,20 @@ const EMPTY = { learned: {}, attempts: {}, exams: [], theme: "system" };
 const ICONS = { Network, Terminal, MessageSquareText, Wrench, ShieldCheck };
 const domainById = Object.fromEntries(DOMAINS.map((d) => [d.id, d]));
 const lessonById = Object.fromEntries(LESSONS.map((l) => [l.id, l]));
-const qById = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));
+const qById = Object.fromEntries([...QUESTIONS, ...MOCK_QUESTIONS].map((q) => [q.id, q]));
+const isMulti = (q) => Array.isArray(q.answer);
+const isRightOpt = (q, o) => (isMulti(q) ? q.answer.includes(o) : q.answer === o);
+const isChosen = (picked, o) => (Array.isArray(picked) ? picked.includes(o) : picked === o);
+const hasAnswer = (a) => (Array.isArray(a) ? a.length > 0 : a != null);
+const isCorrect = (q, a) => (isMulti(q)
+  ? Array.isArray(a) && a.length === q.answer.length && q.answer.every((x) => a.includes(x))
+  : a === q.answer);
 const PASS = 72; // mirrors 720 / 1000
-const LETTERS = ["A", "B", "C", "D"];
+const LETTERS = ["A", "B", "C", "D", "E", "F"];
 const cx = (...c) => c.filter(Boolean).join(" ");
 const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0);
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
-const orderFor = (ids) => Object.fromEntries(ids.map((id) => [id, shuffle([0, 1, 2, 3])]));
+const orderFor = (ids) => Object.fromEntries(ids.map((id) => [id, shuffle(qById[id].options.map((_, i) => i))]));
 const fmt = (s) => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
 const lessonsIn = (d) => LESSONS.filter((l) => l.domain === d);
 const questionsIn = (d) => QUESTIONS.filter((q) => q.domain === d);
@@ -158,7 +166,7 @@ function Options({ q, order, picked, reveal, onPick, explain }) {
   return (
     <div className="flex flex-col gap-2.5">
       {order.map((o, pos) => {
-        const right = o === q.answer, chosen = picked === o;
+        const right = isRightOpt(q, o), chosen = isChosen(picked, o);
         let st = "idle";
         if (reveal) st = right ? "right" : chosen ? "wrong" : "dim";
         else if (chosen) st = "chosen";
@@ -453,11 +461,24 @@ function PracticeRun({ set, record, back, openLesson }) {
 }
 
 /* ============================ EXAM ============================ */
-function ExamHome({ start }) {
+function ExamHome({ start, history }) {
   return (
     <div className="flex flex-col gap-6">
       <LargeTitle title="Mock exam" subtitle="Timed, like the real thing. No hints until you finish." />
-      <Group header="Choose a length" footer={`Pass mark is ${PASS}%, matching the real exam's 720 out of 1,000. The real exam has 60 questions in 120 minutes, about 2 minutes each, so these use the same pace.`}>
+      <Group header="Mock exams" footer="Original questions written to match the official exam guide's scenarios, domains and weightings. They are not real or leaked exam questions. Questions are grouped by scenario, like the real exam, and some ask you to pick 2 answers.">
+        {MOCKS.map((m, i) => {
+          const runs = history.filter((e) => e.mockId === m.id);
+          const best = runs.length ? Math.max(...runs.map((e) => e.pct)) : null;
+          const scen = [...new Set(m.questions.map((q) => q.scenario))];
+          return (
+            <Row key={m.id} last={i === MOCKS.length - 1} icon={<IconTile color={["#FF2D55", "#5856D6", "#FF9500", "#34C759"][i % 4]}><ScrollText size={17} /></IconTile>}
+              title={m.title} subtitle={`${m.questions.length} questions · ${m.minutes} min · ${scen.length} scenarios`}
+              detail={best != null ? <span className={cx("rounded-full px-2.5 py-0.5 text-[13px] font-semibold text-white", best >= PASS ? "bg-green" : "bg-orange")}>Best {best}%</span> : null}
+              onClick={() => start(m.questions.length, m.minutes, m)} />
+          );
+        })}
+      </Group>
+      <Group header="Random practice exams" footer={`Pass mark is ${PASS}%, matching the real exam's 720 out of 1,000. The real exam has 60 questions in 120 minutes, about 2 minutes each, so these use the same pace.`}>
         <Row icon={<IconTile color="#34C759"><Clock size={17} /></IconTile>} title="Quick exam" subtitle="15 questions · 30 minutes" onClick={() => start(15, 30)} />
         <Row last icon={<IconTile color="#5856D6"><Trophy size={17} /></IconTile>} title="Full practice exam" subtitle={`All ${QUESTIONS.length} questions · 60 minutes`} onClick={() => start(QUESTIONS.length, 60)} />
       </Group>
@@ -478,7 +499,7 @@ function ExamRun({ exam, setExam, submit }) {
   const fired = useRef(false);
   useEffect(() => { if (left <= 0 && !fired.current) { fired.current = true; submit(true); } }, [left, submit]);
   const id = exam.ids[exam.cur], q = qById[id];
-  const answered = exam.ids.filter((x) => exam.answers[x] != null).length;
+  const answered = exam.ids.filter((x) => hasAnswer(exam.answers[x])).length;
   const set = (patch) => setExam((e) => ({ ...e, ...patch }));
   const flagged = !!exam.flags[id];
 
@@ -497,8 +518,23 @@ function ExamRun({ exam, setExam, submit }) {
           <Flag size={13} fill={flagged ? "currentColor" : "none"} />{flagged ? "Flagged" : "Flag"}
         </button>
       </div>
+      {exam.mockId && (exam.cur === 0 || qById[exam.ids[exam.cur - 1]].scenario !== q.scenario) && (
+        <div className="rounded-[14px] bg-blue/10 p-3.5">
+          <p className="text-[13px] font-semibold uppercase tracking-wide text-blue">New scenario</p>
+          <p className="mt-0.5 text-[17px] font-semibold text-label">{q.scenario}</p>
+          <p className="mt-1 text-[14px] leading-snug text-label2">{(SCENARIOS.find(([t]) => t === q.scenario) || [])[1]}</p>
+        </div>
+      )}
       <p className="px-1 text-[19px] font-semibold leading-snug text-label">{q.q}</p>
-      <Options q={q} order={exam.orders[id]} picked={exam.answers[id]} reveal={false} onPick={(o) => set({ answers: { ...exam.answers, [id]: o } })} />
+      {isMulti(q) && <p className="-mt-1 px-1 text-[14px] font-semibold text-blue">Select {q.answer.length} answers</p>}
+      <Options q={q} order={exam.orders[id]} picked={exam.answers[id]} reveal={false} onPick={(o) => {
+        let v = o;
+        if (isMulti(q)) {
+          const cur = Array.isArray(exam.answers[id]) ? exam.answers[id] : [];
+          v = cur.includes(o) ? cur.filter((x) => x !== o) : [...cur, o].slice(-q.answer.length);
+        }
+        set({ answers: { ...exam.answers, [id]: v } });
+      }} />
       <div className="mt-1 grid grid-cols-2 gap-3">
         <Button kind="gray" disabled={exam.cur === 0} onClick={() => set({ cur: exam.cur - 1 })}><ChevronLeft size={20} />Back</Button>
         {exam.cur < exam.ids.length - 1
@@ -517,7 +553,7 @@ function ExamRun({ exam, setExam, submit }) {
                   {exam.ids.map((x, i) => (
                     <button key={x} onClick={() => { set({ cur: i }); setSheet(null); }}
                       className={cx("relative flex h-11 items-center justify-center rounded-[10px] text-[15px] font-semibold tabular-nums",
-                        exam.answers[x] != null ? "bg-blue text-white" : "bg-card text-label", i === exam.cur && "ring-2 ring-blue ring-offset-2 ring-offset-[var(--bg)]")}>
+                        hasAnswer(exam.answers[x]) ? "bg-blue text-white" : "bg-card text-label", i === exam.cur && "ring-2 ring-blue ring-offset-2 ring-offset-[var(--bg)]")}>
                       {i + 1}{exam.flags[x] && <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[var(--bg)] bg-orange" />}
                     </button>
                   ))}
@@ -549,7 +585,7 @@ function ExamResult({ r, done, openLesson }) {
   const [filter, setFilter] = useState("wrong");
   const [open, setOpen] = useState(null);
   const items = r.ids.map((id, i) => ({ id, i, q: qById[id], a: r.answers[id] }));
-  const shown = items.filter((x) => filter === "all" || x.a !== x.q.answer);
+  const shown = items.filter((x) => filter === "all" || !isCorrect(x.q, x.a));
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center gap-2 rounded-[16px] bg-card p-6 text-center">
@@ -557,7 +593,7 @@ function ExamResult({ r, done, openLesson }) {
           <span className="text-[28px] font-bold tabular-nums text-label">{r.pct}%</span>
         </Ring>
         <h1 className="mt-1 text-[24px] font-bold text-label">{r.passed ? "You passed!" : "Not yet. Keep going!"}</h1>
-        <p className="text-[15px] text-label2">{r.score} of {r.total} correct · pass mark {PASS}%{r.timedOut ? " · time ran out" : ""} · {fmt(r.secs)} used</p>
+        <p className="text-[15px] text-label2">{r.title ? `${r.title} · ` : ""}{r.score} of {r.total} correct · pass mark {PASS}%{r.timedOut ? " · time ran out" : ""} · {fmt(r.secs)} used</p>
       </div>
 
       <Group header="Score by topic">
@@ -578,13 +614,13 @@ function ExamResult({ r, done, openLesson }) {
         </div>
         {shown.length === 0 && <p className="px-1 text-[15px] text-label2">Nothing wrong. Perfect score!</p>}
         {shown.map(({ id, i, q, a }) => {
-          const ok = a === q.answer;
+          const ok = isCorrect(q, a);
           return (
             <div key={id} className="rounded-[14px] bg-card">
               <button onClick={() => setOpen(open === id ? null : id)} className="flex w-full items-start gap-3 p-3.5 text-left" aria-expanded={open === id}>
                 <span className={cx("mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white", ok ? "bg-green" : "bg-red")}>{ok ? <Check size={14} strokeWidth={3} /> : <X size={14} strokeWidth={3} />}</span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[13px] text-label2">Question {i + 1}{a == null ? " · not answered" : ""}</span>
+                  <span className="block text-[13px] text-label2">Question {i + 1}{!hasAnswer(a) ? " · not answered" : ""}{isMulti(q) ? ` · select ${q.answer.length}` : ""}</span>
                   <span className={cx("block text-[15px] leading-snug text-label", open !== id && "line-clamp-2")}>{q.q}</span>
                 </span>
                 <ChevronRight size={18} className={cx("mt-1 shrink-0 text-label3 transition", open === id && "rotate-90")} />
@@ -604,36 +640,36 @@ function ExamResult({ r, done, openLesson }) {
   );
 }
 
-function ExamTab({ setP, record, openLesson }) {
+function ExamTab({ p, setP, record, openLesson }) {
   const [exam, setExamS] = useState(() => store.get(EXAM_KEY, null));
   const [result, setResult] = useState(null);
   const ref = useRef(exam); ref.current = exam;
   const setExam = useCallback((fn) => setExamS((e) => { const n = typeof fn === "function" ? fn(e) : fn; if (n) store.set(EXAM_KEY, n); else store.del(EXAM_KEY); return n; }), []);
-  const start = (n, mins) => {
-    const ids = shuffle(QUESTIONS).slice(0, n).map((q) => q.id);
+  const start = (n, mins, mock) => {
+    const ids = mock ? mock.questions.map((q) => q.id) : shuffle(QUESTIONS).slice(0, n).map((q) => q.id);
     setResult(null);
-    setExam({ ids, orders: orderFor(ids), answers: {}, flags: {}, cur: 0, at: Date.now(), endsAt: Date.now() + mins * 60000, mins });
+    setExam({ ids, orders: orderFor(ids), answers: {}, flags: {}, cur: 0, at: Date.now(), endsAt: Date.now() + mins * 60000, mins, mockId: mock ? mock.id : null, title: mock ? mock.title : null });
     window.scrollTo({ top: 0 });
   };
   const submit = useCallback((timedOut) => {
     const e = ref.current; if (!e) return; ref.current = null;
     const byDomain = {}; let score = 0;
     e.ids.forEach((id) => {
-      const q = qById[id], ok = e.answers[id] === q.answer;
+      const q = qById[id], ok = isCorrect(q, e.answers[id]);
       byDomain[q.domain] = byDomain[q.domain] || { c: 0, t: 0 };
       byDomain[q.domain].t++; if (ok) { byDomain[q.domain].c++; score++; }
-      if (e.answers[id] != null) record(id, ok);
+      if (hasAnswer(e.answers[id])) record(id, ok);
     });
     const p = pct(score, e.ids.length), secs = Math.min(e.mins * 60, (Date.now() - e.at) / 1000);
     setResult({ ...e, score, total: e.ids.length, pct: p, passed: p >= PASS, byDomain, secs, timedOut });
-    setP((s) => ({ ...s, exams: [...s.exams, { date: new Date().toISOString(), score, total: e.ids.length, pct: p, passed: p >= PASS }] }));
+    setP((s) => ({ ...s, exams: [...s.exams, { date: new Date().toISOString(), score, total: e.ids.length, pct: p, passed: p >= PASS, mockId: e.mockId || null, title: e.title || null }] }));
     setExam(null);
     window.scrollTo({ top: 0 });
   }, [record, setP, setExam]);
 
   if (result) return <ExamResult r={result} done={() => setResult(null)} openLesson={openLesson} />;
   if (exam) return <ExamRun exam={exam} setExam={setExam} submit={submit} />;
-  return <ExamHome start={start} />;
+  return <ExamHome start={start} history={p.exams} />;
 }
 
 /* ============================ PROGRESS ============================ */
@@ -683,7 +719,7 @@ function ProgressTab({ p, setP, openDomain, practise }) {
       {p.exams.length > 0 && (
         <Group header="Exam history">
           {p.exams.slice().reverse().slice(0, 8).map((e, i, a) => (
-            <Row key={e.date} last={i === a.length - 1} title={`${e.pct}% · ${e.score}/${e.total}`}
+            <Row key={e.date} last={i === a.length - 1} title={`${e.title ? e.title + " · " : ""}${e.pct}% · ${e.score}/${e.total}`}
               subtitle={new Date(e.date).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
               detail={<span className={cx("rounded-full px-2.5 py-0.5 text-[13px] font-semibold text-white", e.passed ? "bg-green" : "bg-red")}>{e.passed ? "Pass" : "Fail"}</span>} />
           ))}
@@ -850,7 +886,7 @@ export default function App() {
   } else if (tab === "cheatsheet") {
     screen = <CheatSheetTab openLesson={openLesson} />;
   } else if (tab === "exam") {
-    screen = <ExamTab setP={setP} record={record} openLesson={openLesson} />;
+    screen = <ExamTab p={p} setP={setP} record={record} openLesson={openLesson} />;
   } else {
     screen = <ProgressTab p={p} setP={setP} openDomain={openDomain} practise={startPractice} />;
   }
