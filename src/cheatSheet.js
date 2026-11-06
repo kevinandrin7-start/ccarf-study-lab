@@ -1,7 +1,8 @@
 // Cheat sheet content. To add more, append a section to CHEAT_SHEET.
 // Section fields:
 //   title     heading shown on the card
-//   style     "rules" (numbered list), "warnings" (red cards) or "notes" (plain list)
+//   style     "rules" (numbered list), "warnings" (red cards), "notes" (plain list)
+//             or "table" (items are { concept, rule, diagnostic })
 //   lesson    optional lesson id to link to, e.g. "1.1"
 //   items     list of { text, means? }. `text` is the line to memorise; `means` is an optional
 //             one-line explanation. Text in `backticks` renders as code.
@@ -31,6 +32,20 @@ export const CHEAT_SHEET = [
       { text: "Parsing words → Causes crashes.", means: "Deciding the loop is done by reading Claude's text for words like 'done'." },
       { text: "Iteration cap → Cuts off early.", means: "Stopping after a fixed number of loops instead of on end_turn." },
       { text: "Text content check → Drops tools silently.", means: "Treating any reply that contains text as final, which skips tool calls in the same reply." },
+    ],
+  },
+  {
+    id: "domain1-architecture",
+    title: "Domain 1 Architecture Cheat Sheet",
+    subtitle: "Concept · the hard rule · exam diagnostic (why it matters)",
+    style: "table",
+    lesson: "1.2",
+    items: [
+      { concept: "Topology", rule: "All communication routes through the coordinator.", diagnostic: "Enables absolute observability." },
+      { concept: "Task Tool", rule: "Coordinator needs it; Subagents don't.", diagnostic: "Prevents recursive delegation loops." },
+      { concept: "Parallel Spawning", rule: "Multiple Task calls in ONE response.", diagnostic: "Fixes 3x latency issues." },
+      { concept: "Context Isolation", rule: "Subagents inherit zero history.", diagnostic: "Always explicitly inject context." },
+      { concept: "Siloed Outputs", rule: "Usually caused by overly narrow decomposition.", diagnostic: "Pipeline is missing a synthesis/aggregation step." },
     ],
   },
 ];

@@ -728,7 +728,22 @@ function CheatSheetTab({ openLesson }) {
             <h2 className={cx("text-[20px] font-bold leading-tight", sec.style === "warnings" ? "text-red" : "text-label")}>{sec.title}</h2>
             {sec.subtitle && <p className="mt-0.5 text-[13px] text-label2">{sec.subtitle}</p>}
           </div>
-          {sec.style === "warnings" ? (
+          {sec.style === "table" ? (
+            <div className="overflow-hidden rounded-[12px] bg-card">
+              {sec.items.map((it, i) => (
+                <div key={i} className={cx("flex flex-col gap-1.5 px-4 py-3.5", i < sec.items.length - 1 && "border-b-[0.5px] border-sep")}>
+                  <span className="text-[13px] font-semibold uppercase tracking-wide text-blue">{it.concept}</span>
+                  <p className="text-[17px] font-semibold leading-snug text-label"><Rich text={it.rule} /></p>
+                  {showMeaning && it.diagnostic && (
+                    <p className="flex gap-2 rounded-[10px] bg-orange/10 px-3 py-2 text-[14px] leading-snug text-label">
+                      <Target size={16} className="mt-0.5 shrink-0 text-orange" />
+                      <span><span className="font-semibold text-orange">Exam diagnostic: </span><Rich text={it.diagnostic} /></span>
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : sec.style === "warnings" ? (
             <div className="grid gap-2.5 sm:grid-cols-3">
               {sec.items.map((it, i) => {
                 const [cause, effect] = it.text.split("→").map((x) => x.trim());
