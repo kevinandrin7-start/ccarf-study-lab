@@ -732,7 +732,13 @@ function CheatSheetTab({ openLesson }) {
             <div className="overflow-hidden rounded-[12px] bg-card">
               {sec.items.map((it, i) => (
                 <div key={i} className={cx("flex flex-col gap-1.5 px-4 py-3.5", i < sec.items.length - 1 && "border-b-[0.5px] border-sep")}>
-                  <span className="text-[13px] font-semibold uppercase tracking-wide text-blue">{it.concept}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[15px] font-semibold text-blue">{it.concept}</span>
+                    {it.task && (
+                      <button onClick={() => lessonById[it.task] && openLesson(it.task)}
+                        className="shrink-0 rounded-full bg-fill px-2.5 py-0.5 text-[13px] font-semibold text-label2 active:opacity-50">Task {it.task}</button>
+                    )}
+                  </div>
                   <p className="text-[17px] font-semibold leading-snug text-label"><Rich text={it.rule} /></p>
                   {showMeaning && it.diagnostic && (
                     <p className="flex gap-2 rounded-[10px] bg-orange/10 px-3 py-2 text-[14px] leading-snug text-label">

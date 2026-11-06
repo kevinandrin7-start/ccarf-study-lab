@@ -2,7 +2,8 @@
 // Section fields:
 //   title     heading shown on the card
 //   style     "rules" (numbered list), "warnings" (red cards), "notes" (plain list)
-//             or "table" (items are { concept, rule, diagnostic })
+//             or "table" (items are { concept, rule, diagnostic?, task? }; `task` is a lesson id
+//             like "1.4" and shows as a tappable chip)
 //   lesson    optional lesson id to link to, e.g. "1.1"
 //   items     list of { text, means? }. `text` is the line to memorise; `means` is an optional
 //             one-line explanation. Text in `backticks` renders as code.
@@ -46,6 +47,32 @@ export const CHEAT_SHEET = [
       { concept: "Parallel Spawning", rule: "Multiple Task calls in ONE response.", diagnostic: "Fixes 3x latency issues." },
       { concept: "Context Isolation", rule: "Subagents inherit zero history.", diagnostic: "Always explicitly inject context." },
       { concept: "Siloed Outputs", rule: "Usually caused by overly narrow decomposition.", diagnostic: "Pipeline is missing a synthesis/aggregation step." },
+    ],
+  },
+  {
+    id: "quick-reference",
+    title: "Quick Reference Card",
+    subtitle: "Concept · key exam fact · task statement",
+    style: "table",
+    items: [
+      { concept: "Prompt Instructions", rule: "Probabilistic. Non-zero failure.", task: "1.4" },
+      { concept: "PostToolUse Hook", rule: "Normalization window. Runs before model sees result.", task: "1.5" },
+      { concept: "PreToolUse Hook", rule: "Can block call entirely.", task: "1.5" },
+      { concept: "Prerequisite Gate", rule: "Blocks Tool B until Tool A verified. Programmatic.", task: "1.4" },
+      { concept: "Handoff Summary", rule: "Self-contained context without conversation transcript.", task: "1.4" },
+      { concept: "Prompt Chaining", rule: "Fixed steps. Known upfront. Predictable tasks.", task: "1.6" },
+      { concept: "Dynamic Decomposition", rule: "Steps from discoveries. Open-ended tasks.", task: "1.6" },
+    ],
+  },
+  {
+    id: "distractor-patterns",
+    title: "Distractor Patterns to Reject",
+    subtitle: "Answer options that sound right but aren't",
+    style: "warnings",
+    items: [
+      { text: "Add stronger prompt instructions → Always wrong for guaranteed enforcement.", means: "Prompts are probabilistic. If something must always happen, use a hook or a prerequisite gate in code." },
+      { text: "Add few-shot examples → Correct for consistency, NOT for compliance.", means: "Examples make output format steadier, but they can't force the model to follow a rule every time." },
+      { text: "Pre-define all steps → Wrong for open-ended tasks with unknown scope.", means: "When you can't know the steps upfront, let the agent decompose dynamically from what it discovers." },
     ],
   },
 ];
