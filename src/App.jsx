@@ -472,7 +472,7 @@ function ExamHome({ start, history }) {
           const scen = [...new Set(m.questions.map((q) => q.scenario))];
           return (
             <Row key={m.id} last={i === MOCKS.length - 1} icon={<IconTile color={["#FF2D55", "#5856D6", "#FF9500", "#34C759"][i % 4]}><ScrollText size={17} /></IconTile>}
-              title={m.title} subtitle={`${m.questions.length} questions · ${m.minutes} min · ${scen.length} scenarios`}
+              title={m.title} subtitle={`${m.subtitle ? m.subtitle + " · " : ""}${m.questions.length} questions · ${m.minutes} min`}
               detail={best != null ? <span className={cx("rounded-full px-2.5 py-0.5 text-[13px] font-semibold text-white", best >= PASS ? "bg-green" : "bg-orange")}>Best {best}%</span> : null}
               onClick={() => start(m.questions.length, m.minutes, m)} />
           );
