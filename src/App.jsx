@@ -512,7 +512,7 @@ function ExamRun({ exam, setExam, submit }) {
   const set = (patch) => setExam((e) => ({ ...e, ...patch }));
   const flagged = !!exam.flags[id];
   const a = exam.answers[id];
-  const revealed = !!exam.instant && (isMulti(q) ? Array.isArray(a) && a.length === q.answer.length : a != null);
+  const revealed = exam.instant !== false && (isMulti(q) ? Array.isArray(a) && a.length === q.answer.length : a != null);
 
   return (
     <div className="flex flex-col gap-4">
