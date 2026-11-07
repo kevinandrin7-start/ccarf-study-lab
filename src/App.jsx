@@ -461,10 +461,19 @@ function PracticeRun({ set, record, back, openLesson }) {
 }
 
 /* ============================ EXAM ============================ */
-function ExamHome({ start, history }) {
+function ExamHome({ start, history, instant, setInstant }) {
   return (
     <div className="flex flex-col gap-6">
-      <LargeTitle title="Mock exam" subtitle="Timed, like the real thing. No hints until you finish." />
+      <LargeTitle title="Mock exam" subtitle={instant ? "Timed, with answers shown as you go." : "Timed, like the real thing. No hints until you finish."} />
+      <Group footer={instant ? "Each answer is marked right or wrong, with explanations, as soon as you pick it." : "Exam style: no answers until you finish, like the real exam."}>
+        <div className="flex items-center gap-3 px-4 py-3">
+          <span className="min-w-0 flex-1 text-[17px] text-label">Show answers as I go</span>
+          <button role="switch" aria-checked={instant} aria-label="Show answers as I go" onClick={() => setInstant(!instant)}
+            className={cx("relative h-[31px] w-[51px] shrink-0 rounded-full transition-colors", instant ? "bg-green" : "bg-fill")}>
+            <span className={cx("absolute top-[2px] h-[27px] w-[27px] rounded-full bg-white shadow transition-all", instant ? "left-[22px]" : "left-[2px]")} />
+          </button>
+        </div>
+      </Group>
       <Group header="Mock exams" footer="Original questions written to match the official exam guide's scenarios, domains and weightings. They are not real or leaked exam questions. Questions are grouped by scenario, like the real exam, and some ask you to pick 2 answers.">
         {MOCKS.map((m, i) => {
           const runs = history.filter((e) => e.mockId === m.id);
@@ -502,6 +511,8 @@ function ExamRun({ exam, setExam, submit }) {
   const answered = exam.ids.filter((x) => hasAnswer(exam.answers[x])).length;
   const set = (patch) => setExam((e) => ({ ...e, ...patch }));
   const flagged = !!exam.flags[id];
+  const a = exam.answers[id];
+  const revealed = !!exam.instant && (isMulti(q) ? Array.isArray(a) && a.length === q.answer.length : a != null);
 
   return (
     <div className="flex flex-col gap-4">
@@ -527,7 +538,12 @@ function ExamRun({ exam, setExam, submit }) {
       )}
       <p className="px-1 text-[19px] font-semibold leading-snug text-label">{q.q}</p>
       {isMulti(q) && <p className="-mt-1 px-1 text-[14px] font-semibold text-blue">Select {q.answer.length} answers</p>}
-      <Options q={q} order={exam.orders[id]} picked={exam.answers[id]} reveal={false} onPick={(o) => {
+      {revealed && (
+        <div className={cx("flex items-center gap-2 rounded-[12px] p-3 text-[16px] font-semibold", isCorrect(q, exam.answers[id]) ? "bg-green/15 text-green" : "bg-red/15 text-red")}>
+          {isCorrect(q, exam.answers[id]) ? <><CircleCheck size={20} />Correct!</> : <><AlertTriangle size={20} />Not quite. The right answer{isMulti(q) ? "s are" : " is"} in green.</>}
+        </div>
+      )}
+      <Options q={q} order={exam.orders[id]} picked={exam.answers[id]} reveal={revealed} explain="all" onPick={(o) => {
         let v = o;
         if (isMulti(q)) {
           const cur = Array.isArray(exam.answers[id]) ? exam.answers[id] : [];
@@ -648,7 +664,7 @@ function ExamTab({ p, setP, record, openLesson }) {
   const start = (n, mins, mock) => {
     const ids = mock ? mock.questions.map((q) => q.id) : shuffle(QUESTIONS).slice(0, n).map((q) => q.id);
     setResult(null);
-    setExam({ ids, orders: orderFor(ids), answers: {}, flags: {}, cur: 0, at: Date.now(), endsAt: Date.now() + mins * 60000, mins, mockId: mock ? mock.id : null, title: mock ? mock.title : null });
+    setExam({ ids, orders: orderFor(ids), answers: {}, flags: {}, cur: 0, at: Date.now(), endsAt: Date.now() + mins * 60000, mins, mockId: mock ? mock.id : null, title: mock ? mock.title : null, instant: p.instant !== false });
     window.scrollTo({ top: 0 });
   };
   const submit = useCallback((timedOut) => {
@@ -669,7 +685,7 @@ function ExamTab({ p, setP, record, openLesson }) {
 
   if (result) return <ExamResult r={result} done={() => setResult(null)} openLesson={openLesson} />;
   if (exam) return <ExamRun exam={exam} setExam={setExam} submit={submit} />;
-  return <ExamHome start={start} history={p.exams} />;
+  return <ExamHome start={start} history={p.exams} instant={p.instant !== false} setInstant={(v) => setP((s) => ({ ...s, instant: v }))} />;
 }
 
 /* ============================ PROGRESS ============================ */
