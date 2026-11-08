@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import {
   BookOpen, Layers, Timer, BarChart3, ChevronLeft, ChevronRight, Check, X, Flag, Lightbulb,
   Target, Network, Terminal, MessageSquareText, Wrench, ShieldCheck, RotateCcw, Trophy,
-  AlertTriangle, Info, Play, Clock, CircleCheck, LayoutGrid, Sparkles, Bookmark, ScrollText, Ban,
+  AlertTriangle, Info, Play, Pause, Clock, CircleCheck, LayoutGrid, Sparkles, Bookmark, ScrollText, Ban,
 } from "lucide-react";
 import { DOMAINS, LESSONS, EXAM_FACTS, SCENARIOS } from "./lessons.js";
 import { QUESTIONS } from "./questions.js";
@@ -504,9 +504,25 @@ function ExamRun({ exam, setExam, submit }) {
   const [now, setNow] = useState(Date.now());
   const [sheet, setSheet] = useState(null); // "map" | "submit"
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
-  const left = (exam.endsAt - now) / 1000;
+  const paused = !!exam.pausedAt;
+  const left = (exam.endsAt - (paused ? exam.pausedAt : now)) / 1000;
   const fired = useRef(false);
-  useEffect(() => { if (left <= 0 && !fired.current) { fired.current = true; submit(true); } }, [left, submit]);
+  useEffect(() => { if (!paused && left <= 0 && !fired.current) { fired.current = true; submit(true); } }, [left, paused, submit]);
+  const pause = useCallback(() => setExam((e) => (e && !e.pausedAt ? { ...e, pausedAt: Date.now() } : e)), [setExam]);
+  const resume = () => setExam((e) => {
+    if (!e || !e.pausedAt) return e;
+    const d = Date.now() - e.pausedAt;
+    return { ...e, endsAt: e.endsAt + d, at: e.at + d, pausedAt: null };
+  });
+  // Pause automatically when the app goes to the background or is closed, so time isn't lost.
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === "hidden") pause(); };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", pause);
+    return () => { document.removeEventListener("visibilitychange", onHide); window.removeEventListener("pagehide", pause); };
+  }, [pause]);
+  // Leaving the Exam tab also pauses it.
+  useEffect(() => () => pause(), [pause]);
   const id = exam.ids[exam.cur], q = qById[id];
   const answered = exam.ids.filter((x) => hasAnswer(exam.answers[x])).length;
   const set = (patch) => setExam((e) => ({ ...e, ...patch }));
@@ -518,7 +534,9 @@ function ExamRun({ exam, setExam, submit }) {
     <div className="flex flex-col gap-4">
       <div className="navbar sticky z-30 -mx-4 mb-1 flex h-11 items-center justify-between px-4">
         <button onClick={() => setSheet("map")} className="flex items-center gap-1.5 text-[17px] text-blue active:opacity-50"><LayoutGrid size={18} />{exam.cur + 1}/{exam.ids.length}</button>
-        <span className={cx("flex items-center gap-1 text-[17px] font-semibold tabular-nums", left < 300 ? "text-red" : "text-label")}><Timer size={18} />{fmt(left)}</span>
+        <button onClick={pause} aria-label="Pause exam" className={cx("flex items-center gap-1.5 rounded-full bg-fill px-3 py-1 text-[17px] font-semibold tabular-nums active:opacity-50", left < 300 ? "text-red" : "text-label")}>
+          <Pause size={15} fill="currentColor" />{fmt(left)}
+        </button>
         <button onClick={() => setSheet("submit")} className="text-[17px] font-semibold text-blue active:opacity-50">Finish</button>
       </div>
       <ProgressBar value={pct(answered, exam.ids.length)} />
@@ -558,7 +576,18 @@ function ExamRun({ exam, setExam, submit }) {
           : <Button onClick={() => setSheet("submit")}>Finish</Button>}
       </div>
 
-      {sheet && (
+      {paused && (
+        <div className="fixed inset-0 z-[35] flex flex-col items-center justify-center gap-5 bg-bg px-8 pb-24 text-center" role="dialog" aria-modal="true" aria-label="Exam paused">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-blue/15 text-blue"><Pause size={30} fill="currentColor" /></span>
+          <div>
+            <h2 className="text-[28px] font-bold text-label">Paused</h2>
+            <p className="mt-1 text-[17px] text-label2">{exam.title || "Exam"} · {fmt(left)} left · {answered}/{exam.ids.length} answered</p>
+            <p className="mt-2 text-[15px] text-label2">The timer is stopped. Questions are hidden until you resume.</p>
+          </div>
+          <div className="w-full max-w-[320px]"><Button onClick={resume}><Play size={18} fill="currentColor" />Resume</Button></div>
+        </div>
+      )}
+      {sheet && !paused && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={() => setSheet(null)}>
           <div className="sheet w-full max-w-[520px] rounded-t-[20px] bg-bg p-4 sm:rounded-[20px]" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
             <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-label3 sm:hidden" />
